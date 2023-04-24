@@ -4,7 +4,6 @@ from matplotlib import pyplot as plt
 import math
 from utils.constants import *
 from utils.video_paths_collector import VideoPathsCollector
-from anomaly import Anomaly
 from utils.excel_writer import ExcelWriter
 import time
 import json
@@ -47,6 +46,8 @@ if __name__ == '__main__':
         frame_number = 0
         while (1):
             s = 0
+            if frame_number == 100:
+                break
             frame_number = frame_number + 1
             ret, frame2 = cap.read()
             print('frame number: ', frame_number)
@@ -103,7 +104,7 @@ if __name__ == '__main__':
         print('anomaly score!: ', anamoly_score)
         for i in range(len(anamoly_score)):
             if anamoly_score[i] > th:
-                anomaly = Anomaly(anamoly_score[i], i)
+                anomaly = (anamoly_score[i], i)
                 anomalies.append(anomaly)
                 bv = bv + 1
         no_of_forgery.append(bv)
@@ -120,6 +121,6 @@ if __name__ == '__main__':
         cap.release()
     end = time.time()
     print('general_time: ', end - start)
-    excel_writer.write(all_manipulations, False)
     with open(MANIPULATIONS_DETECTION_RESULT_PATH, "w") as write_file:
         json.dump(all_manipulations, write_file)
+    excel_writer.write(all_manipulations, False)

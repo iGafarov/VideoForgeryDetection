@@ -22,8 +22,7 @@ class ExcelWriter:
             worksheet.write(0, 2 + i, 'score')
             j = 0
             for anomaly in anomalies:
-                score = anomaly.score
-                frame = anomaly.frame
+                score, frame = anomaly
                 worksheet.write(1 + j, 1 + i, frame)
                 worksheet.write(1 + j, 2 + i, score)
                 j += 1

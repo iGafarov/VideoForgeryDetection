@@ -91,8 +91,7 @@ if __name__ == '__main__':
                 true_frames = all_true_manipulations[video_name]
                 result_frames = []
                 for anomaly in anomalies:
-                    score = anomaly.score
-                    frame = anomaly.frame
+                    score, frame = anomaly
                     result_frames.append(frame + 1)
                 result_frames, true_frames = zeros_appending(result_frames, true_frames)
                 matrix = calculate_confusion_matrix(result_frames, true_frames)
