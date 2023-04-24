@@ -16,7 +16,6 @@ def get_video_name(path: str):
 
 if __name__ == '__main__':
     th = 3
-    # path = "C:\\Users\\iskan\\Desktop\\test_videos"
     no_of_forgery = []
     video_name = []
     video_paths_collector = VideoPathsCollector(PATH_TO_VIDEOS)

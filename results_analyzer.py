@@ -26,7 +26,7 @@ def calculate_confusion_matrix(result_frames: list, true_frames: list):
 
 
 def calculate_frame_with_accuracy(frame: int):
-    accuracy = 5
+    accuracy = 8
     frame_with_accuracy = []
 
     left = frame - accuracy
@@ -46,10 +46,14 @@ def zeros_appending(result_frames: list, true_frames: list):
     for result_frame in result_frames:
         for accuracy_frame in calculate_frame_with_accuracy(result_frame):
             if true_frames.__contains__(accuracy_frame):
-                result_frames[result_frames.index(result_frame)] = accuracy_frame
-                matched_frames.append(accuracy_frame)
-                matched_count += 1
-                break
+                if matched_frames.__contains__(accuracy_frame):
+                    result_frames.pop(result_frames.index(result_frame))
+                    break
+                else:
+                    result_frames[result_frames.index(result_frame)] = accuracy_frame
+                    matched_frames.append(accuracy_frame)
+                    matched_count += 1
+                    break
 
     missing_on_result = true_frames.copy()
     missing_on_true = result_frames.copy()
@@ -92,8 +96,13 @@ if __name__ == '__main__':
                 result_frames = []
                 for anomaly in anomalies:
                     score, frame = anomaly
-                    result_frames.append(frame + 1)
+                    contains = False
+                    for result_frame in calculate_frame_with_accuracy(frame):
+                        if result_frames.__contains__(result_frame):
+                            contains = True
+                    if not contains:
+                        result_frames.append(frame)
                 result_frames, true_frames = zeros_appending(result_frames, true_frames)
                 matrix = calculate_confusion_matrix(result_frames, true_frames)
-                print(matrix)
+                print(video_name + ': \n', matrix)
         print('prikol')
