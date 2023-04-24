@@ -2,9 +2,12 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import math
+from utils.constants import *
 from utils.video_paths_collector import VideoPathsCollector
 from anomaly import Anomaly
 from utils.excel_writer import ExcelWriter
+import time
+import json
 
 
 def get_video_name(path: str):
@@ -14,14 +17,14 @@ def get_video_name(path: str):
 
 if __name__ == '__main__':
     th = 3
-    path = "C:\\Users\\iskan\\Desktop\\test_videos"
-    paths_to_video_paths = "C:\\Users\\iskan\\PycharmProjects\\Video-Forgery-Detection\\utils\\video_paths"
+    # path = "C:\\Users\\iskan\\Desktop\\test_videos"
     no_of_forgery = []
     video_name = []
-    video_paths_collector = VideoPathsCollector(paths_to_video_paths)
+    video_paths_collector = VideoPathsCollector(PATH_TO_VIDEOS)
     videos_paths = video_paths_collector.collect()
     all_manipulations = {}
-    excel_writer = ExcelWriter("C:\\Users\\iskan\\PycharmProjects\\Video-Forgery-Detection\\results", 'results')
+    excel_writer = ExcelWriter(PATH_TO_RESULTS, 'results')
+    start = time.time()
     for video_path in videos_paths:
         file = get_video_name(video_path)
         print('Process ', file)
@@ -115,4 +118,8 @@ if __name__ == '__main__':
         plt.close()
         cv2.destroyAllWindows()
         cap.release()
-    # excel_writer.write(all_manipulations, False)
+    end = time.time()
+    print('general_time: ', end - start)
+    excel_writer.write(all_manipulations, False)
+    with open(MANIPULATIONS_DETECTION_RESULT_PATH, "w") as write_file:
+        json.dump(all_manipulations, write_file)
