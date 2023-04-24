@@ -46,8 +46,6 @@ if __name__ == '__main__':
         frame_number = 0
         while (1):
             s = 0
-            if frame_number == 100:
-                break
             frame_number = frame_number + 1
             ret, frame2 = cap.read()
             print('frame number: ', frame_number)
