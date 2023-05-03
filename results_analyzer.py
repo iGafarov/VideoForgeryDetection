@@ -1,40 +1,39 @@
 import json
 import cv2
 import numpy as np
-from utils.constants import MANIPULATIONS_DETECTION_RESULT_PATH
-from utils.constants import TRUE_MANIPULATIONS_PATH
-from utils.constants import PATH_TO_RESULTS
-from utils.constants import PATH_TO_VIDEOS
+from utils.constants import *
 from utils.video_paths_collector import VideoPathsCollector
 import matplotlib.pyplot as plt
+from sklearn.metrics import *
 
 
-def calculate_confusion_matrix(result_frames: list, true_frames: list, frames_number: int):
-    confusion_matrix = np.zeros((2, 2), dtype=int)
-    TN, TP, FP, FN = 0, 0, 0, 0
-    for i in range(0, len(result_frames)):
-        if result_frames[i] > 0:
-            if true_frames[i] > 0:
-                TP += 1
-            else:
-                FP += 1
-        else:
-            if true_frames[i] > 0:
-                FN += 1
-    TN = frames_number - TP - FP - FN
-    confusion_matrix[1, 1] = TN
-    confusion_matrix[0, 0] = TP
-    confusion_matrix[0, 1] = FP
-    confusion_matrix[1, 0] = FN
-    return confusion_matrix
+ACCURACY = 5
+MAX_SCORE = 5.0
+# def calculate_confusion_matrix(result_frames: list, true_frames: list, frames_number: int):
+#     confusion_matrix = np.zeros((2, 2), dtype=int)
+#     TN, TP, FP, FN = 0, 0, 0, 0
+#     for i in range(0, len(result_frames)):
+#         if result_frames[i] > 0:
+#             if true_frames[i] > 0:
+#                 TP += 1
+#             else:
+#                 FP += 1
+#         else:
+#             if true_frames[i] > 0:
+#                 FN += 1
+#     TN = frames_number - TP - FP - FN
+#     confusion_matrix[1, 1] = TN
+#     confusion_matrix[0, 0] = TP
+#     confusion_matrix[0, 1] = FP
+#     confusion_matrix[1, 0] = FN
+#     return confusion_matrix
 
 
 def calculate_frame_with_accuracy(frame: int):
-    accuracy = 8
     frame_with_accuracy = []
 
-    left = frame - accuracy
-    right = frame + accuracy
+    left = frame - ACCURACY
+    right = frame + ACCURACY
     if left < 0:
         left = 0
     for i in range(left, right + 1):
@@ -43,21 +42,18 @@ def calculate_frame_with_accuracy(frame: int):
     return frame_with_accuracy
 
 
-def zeros_appending(result_frames: list, true_frames: list):
+def zeros_appending(result_frames: list, true_frames: list, frames_number: int):
     matched_count = 0
     matched_frames = []
+    result_frames_copy = result_frames.copy()
 
     for result_frame in result_frames:
         for accuracy_frame in calculate_frame_with_accuracy(result_frame):
             if true_frames.__contains__(accuracy_frame):
-                if matched_frames.__contains__(accuracy_frame):
-                    result_frames.pop(result_frames.index(result_frame))
-                    break
-                else:
-                    result_frames[result_frames.index(result_frame)] = accuracy_frame
-                    matched_frames.append(accuracy_frame)
-                    matched_count += 1
-                    break
+                result_frames[result_frames.index(result_frame)] = accuracy_frame
+                matched_frames.append(accuracy_frame)
+                matched_count += 1
+                break
 
     missing_on_result = true_frames.copy()
     missing_on_true = result_frames.copy()
@@ -71,22 +67,34 @@ def zeros_appending(result_frames: list, true_frames: list):
     for missing in missing_on_true:
         true_frames.append(missing)
 
-    calculated_result_frames = sorted(result_frames)
-    calculated_true_frames = sorted(true_frames)
+    raw_calculated_result_frames = sorted(result_frames)
+    raw_calculated_true_frames = sorted(true_frames)
 
     index = 0
-    for result_frame in calculated_result_frames:
+    for result_frame in raw_calculated_result_frames:
         if missing_on_result.__contains__(result_frame):
-            calculated_result_frames[index] = 0
+            raw_calculated_result_frames[index] = 0
         index += 1
 
     index = 0
-    for true_frame in calculated_true_frames:
+    for true_frame in raw_calculated_true_frames:
         if missing_on_true.__contains__(true_frame):
-            calculated_true_frames[index] = 0
+            raw_calculated_true_frames[index] = 0
         index += 1
 
-    return calculated_result_frames, calculated_true_frames
+    y_true = np.zeros(frames_number, int)
+    y_pred = np.zeros(frames_number, int)
+
+    for i in range(1, frames_number + 1):
+        if raw_calculated_result_frames.__contains__(i):
+            for j in calculate_frame_with_accuracy(i):
+                if result_frames_copy.__contains__(j):
+                    y_pred[i - 1] = j + ACCURACY
+
+        if raw_calculated_true_frames.__contains__(i):
+            y_true[i - 1] = 1
+
+    return y_pred, y_true
 
 
 def collect_frames_counts():
@@ -106,7 +114,7 @@ def get_video_name(path: str):
     return parsed[len(parsed) - 1]
 
 
-def draw_graph(matrix_list: list):
+def draw_graphs(matrix_list: list):
     TPR = []
     FPR = []
     index = 0
@@ -133,6 +141,50 @@ def draw_graph(matrix_list: list):
     print('TPR: ', TPR)
 
 
+def calculate_samples_with_percent(anomalies: list, true_frames: list, frames_number: int):
+    y_true = np.zeros(frames_number)
+    for i in range(0, frames_number):
+        if true_frames.__contains__(i):
+            y_true[i - 1] = 1.0
+
+    y_pred = np.zeros(frames_number)
+    for anomaly in anomalies:
+        score, frame = anomaly
+        if score > MAX_SCORE:
+            score = MAX_SCORE
+        y_pred[frame] = score / MAX_SCORE
+
+    return y_pred, y_true
+
+
+def draw_roc_auc(pred, true, name):
+    print(name, 'y_pred: ', pred)
+    print(name, 'y_true: ', true)
+    fpr, tpr, threshold = roc_curve(true, pred)
+    roc_auc_score(true, pred)
+    plt.plot(fpr, tpr)
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    graph_path = GRAPH_PATH + '\\rocauc\\' + name + '_roc_auc' + '.png'
+    print(name, '-auc: ', roc_auc_score(y_true, y_pred))
+    plt.savefig(graph_path)
+    plt.close()
+
+
+def draw_graph(pred, name, frames_number):
+    frames = []
+    for i in range(0, frames_number):
+        frames.append(i)
+    graph_path = GRAPH_PATH + '\\graph\\' + name + '.png'
+    plt.title('Video forgery')
+    plt.xlabel('Frame Number')
+    plt.ylabel('Anomaly Percent')
+    plot_name = graph_path
+    plt.plot(frames, pred)
+    plt.savefig(plot_name)
+    plt.close()
+
+
 if __name__ == '__main__':
     with open(MANIPULATIONS_DETECTION_RESULT_PATH, "r") as results_file:
         all_manipulations = json.load(results_file)
@@ -140,21 +192,53 @@ if __name__ == '__main__':
             all_true_manipulations = json.load(true_results_file)
             error_matrix_list = []
             frames_counts = collect_frames_counts()
+            y_preds = []
+            y_trues = []
             for video_name in all_manipulations.keys():
                 anomalies = all_manipulations[video_name]
                 true_frames = all_true_manipulations[video_name]
-                result_frames = []
-                for anomaly in anomalies:
-                    score, frame = anomaly
-                    contains = False
-                    for result_frame in calculate_frame_with_accuracy(frame):
-                        if result_frames.__contains__(result_frame):
-                            contains = True
-                    if not contains:
+                if len(anomalies) < frames_counts[video_name] - 50:
+                    result_frames = []
+                    for anomaly in anomalies:
+                        score, frame = anomaly
+                        contains = False
+                        for result_frame in calculate_frame_with_accuracy(frame):
+                            if result_frames.__contains__(result_frame):
+                                result_frames.remove(result_frame)
                         result_frames.append(frame)
-                result_frames, true_frames = zeros_appending(result_frames, true_frames)
-                error_matrix = calculate_confusion_matrix(result_frames, true_frames, frames_counts[video_name])
-                print(video_name + ': \n', error_matrix)
-                error_matrix_list.append(error_matrix)
-            draw_graph(error_matrix_list)
+                    y_pred, y_true = zeros_appending(result_frames, true_frames, frames_counts[video_name])
+                    print('y_pred: ', y_pred)
+                    print('y_true: ', y_true)
+                    error_matrix = confusion_matrix(y_true, y_pred)
+                    fpr, tpr, thresholds = roc_curve(y_true, y_pred)
+                    print('FPR: ', fpr)
+                    print('TPR: ', tpr)
+                    plt.plot(fpr, tpr)
+                    plt.xlabel('False Positive Rate')
+                    plt.ylabel('True Positive Rate')
+                    graph_path = GRAPH_PATH + '\\' + video_name + '_roc_auc' + '.png'
+                    plt.savefig(graph_path)
+                    plt.close()
+                    print(video_name + ': \n', error_matrix)
+                    error_matrix_list.append(error_matrix)
+                else:
+                    y_pred, y_true = calculate_samples_with_percent(anomalies, true_frames, frames_counts[video_name])
+                    draw_graph(y_pred, video_name, frames_counts[video_name])
+                    draw_roc_auc(y_pred, y_true, video_name)
+                    y_preds.append(y_pred)
+                    y_trues.append(y_true)
+                    # print('y_pred: ', y_pred)
+                    # print('y_true: ', y_true)
+                    # draw_graph(y_pred, y_true, video_name)
+            y_true_general = []
+            y_pred_general = []
+            for y_true in y_trues:
+                for percent in y_true:
+                    y_true_general.append(percent)
+
+            for y_pred in y_preds:
+                for percent in y_pred:
+                    y_pred_general.append(percent)
+            draw_roc_auc(y_pred_general, y_true_general, 'general')
+            # draw_graph(error_matrix_list)
         print('prikol')

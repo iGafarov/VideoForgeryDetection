@@ -15,7 +15,7 @@ def get_video_name(path: str):
 
 
 if __name__ == '__main__':
-    th = 3
+    th = 0
     no_of_forgery = []
     video_name = []
     video_paths_collector = VideoPathsCollector(PATH_TO_VIDEOS)
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         anomalies = []
         print('anomaly score!: ', anamoly_score)
         for i in range(len(anamoly_score)):
-            if anamoly_score[i] > th:
+            if anamoly_score[i] >= th:
                 anomaly = (anamoly_score[i], i)
                 anomalies.append(anomaly)
                 bv = bv + 1
