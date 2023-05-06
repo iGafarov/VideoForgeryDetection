@@ -7,3 +7,6 @@ MANIPULATIONS_DETECTION_RESULT_PATH = absolute_path("results/json_results.json")
 TRUE_MANIPULATIONS_PATH = absolute_path("results/true_results.json").__str__()
 GRAPH_PATH = absolute_path("results/graphs").__str__()
 
+ACCURACY = 5
+MAX_SCORE = 5.0
+
